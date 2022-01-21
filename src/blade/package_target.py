@@ -56,6 +56,7 @@ class PackageTarget(Target):
                 deps=deps,
                 visibility=visibility,
                 tags=tags,
+                substitute_deps={},
                 kwargs=kwargs)
 
         if type not in _package_types:

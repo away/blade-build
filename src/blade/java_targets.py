@@ -39,6 +39,7 @@ class MavenJar(Target):
                 deps=[],
                 visibility=visibility,
                 tags=tags,
+                substitute_deps={},
                 kwargs={})
         self._check_id(id)
         self._check_allowed_dirs()
@@ -634,6 +635,7 @@ class JavaTarget(Target, JavaTargetMixIn):
                 deps=deps,
                 visibility=visibility,
                 tags=tags,
+                substitute_deps={},
                 kwargs=kwargs)
         self._process_resources(resources)
         self.attr['source_encoding'] = source_encoding

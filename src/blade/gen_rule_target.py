@@ -63,6 +63,7 @@ class GenRuleTarget(Target):
                 deps=deps,
                 visibility=visibility,
                 tags=tags,
+                substitute_deps={},
                 kwargs=kwargs)
         self._add_tags('type:gen_rule')
         if not outs:

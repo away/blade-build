@@ -115,6 +115,7 @@ class Target(object):
                  deps,
                  visibility,
                  tags,
+                 substitute_deps,
                  kwargs):
         """Init method.
 
@@ -140,6 +141,7 @@ class Target(object):
         self.source_location = source_location(os.path.join(current_source_path, 'BUILD'))
         self.srcs = srcs
         self.deps = []
+        self.substitute_deps = {}
 
         # Expanded dependencies, includes direct and indirect dependies.
         self.expanded_deps = []    # Provide type info then make lints happy(not-an-iterable).
@@ -176,6 +178,7 @@ class Target(object):
         self._check_kwargs(kwargs)
         self._check_srcs(src_exts)
         self._init_target_deps(deps)
+        self._init_substitute_deps(substitute_deps)
         self._init_visibility(visibility)
         self._add_tags(*tags)
         self.__build_code = None
@@ -480,6 +483,88 @@ class Target(object):
             if dkey and dkey not in self.deps:
                 self.deps.append(dkey)
 
+    def _init_substitute_deps(self, substitute_deps):
+        """Init the substitute deps.
+
+        Parameters
+        -----------
+        substitute_deps: the substitute_deps dict in BUILD file.
+
+        Description
+        -----------
+        Add substitute deps into target and init the substitute_deps.
+
+        """
+        if not substitute_deps:
+            return
+        if not isinstance(substitute_deps, dict):
+            self.error('%s substitute_deps type should be dict, eg. {"a": "b"}' % self.name)
+            return
+        # no td is ok, it is for recover/hide sub nodes substitute
+        for fd, td in substitute_deps.items():
+            if fd == td:
+                self.error("Can not substitute for same one. target %s (%s:%s)\n"
+                           "If want to hide sub-nodes substitue, use None or ''"
+                           % (self.name, fd, td))
+                continue
+
+            if fd.startswith('#') or (td and td.startswith('#')):
+                self.error("Not allowed to substitute system lib. target %s (%s:%s)" % (self.name, fd, td))
+                continue
+            if not fd.startswith('//'):
+                fd = '//' + fd
+            if td and not td.startswith('//'):
+                td = '//' + td
+            fdkey = self._unify_dep(fd)
+            if not fdkey:
+                return
+            if td:
+                tdkey = self._unify_dep(td)
+                if not tdkey:
+                    return
+            else:
+                tdkey = ''
+            if tdkey and tdkey not in self.deps:
+                self.deps.append(tdkey)
+
+            self.substitute_deps[fdkey] = tdkey
+
+        if self.substitute_deps:
+            self.attr['substitute_deps'] = self.substitute_deps.copy()
+
+    def merge_substitute_deps(self, substitute_deps):
+        """merge substitute deps.
+
+        Parameters
+        -----------
+        substitute_deps: the substitute deps dict from sub-nodes to merge.
+
+        Description
+        -----------
+        Merge substitute deps into target substitute_deps.
+
+        """
+        for fd, td in substitute_deps.items():
+            if fd not in self.substitute_deps:
+                self.substitute_deps[fd] = td
+                continue
+
+            mytd = self.substitute_deps[fd]
+            if mytd == td:
+                continue
+
+            # sub nodes want to infect upper node the substitute, but item exists a diff one
+            if not mytd:  # item exist but value is None: do not substitute, it is recover case
+                # to remove td from deps which init in sub nodes
+                self.substitute_deps[td] = fd
+                self.info('target [%s] substitute_deps recover: %s <= %s' %
+                            (self.name, fd, td))
+            else:
+                # target substitue from leaves to root, do not overwrite.
+                self.substitute_deps[td] = mytd  # to remove td from deps which init in sub nodes
+                self.warning('target [%s] substitute_deps item conflict [%s], use %s instead of %s' %
+                                (self.name, fd, mytd, td))
+
     def _init_visibility(self, visibility):
         """Initialize the `visibility` attribute.
 
@@ -761,6 +846,7 @@ class SystemLibrary(Target):
                 deps=[],
                 visibility=['PUBLIC'],
                 tags=['lang:cc', 'type:library', 'type:system'],
+                substitute_deps={},
                 kwargs={})
         self.path = '#'
         self.key = '#:' + name

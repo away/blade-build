@@ -23,6 +23,7 @@ from blade import config
 from blade import inclusion_check
 from blade.constants import HEAP_CHECK_VALUES
 from blade.target import Target
+from blade import console
 from blade.util import (
     mkdir_p,
     path_under_dir,
@@ -164,6 +165,7 @@ class CcTarget(Target):
                  extra_cppflags,
                  extra_linkflags,
                  kwargs,
+                 substitute_deps={},
                  src_exts=_SOURCE_FILE_EXTS):
         """Init method.
 
@@ -184,6 +186,7 @@ class CcTarget(Target):
                 deps=deps,
                 visibility=visibility,
                 tags=tags,
+                substitute_deps=substitute_deps,
                 kwargs=kwargs)
 
         self._check_defs(defs)
@@ -429,6 +432,11 @@ class CcTarget(Target):
                 sys_libs.append(dep.name)
                 continue
 
+            if key in self.substitute_deps and self.substitute_deps[key]:
+                console.info('[%s] dynamic lib %s was substitued for %s' % (
+                    self.name, key, self.substitute_deps[key]))
+                continue
+
             lib = dep._get_target_file('so')
             if lib:
                 usr_libs.append(lib)
@@ -455,6 +463,11 @@ class CcTarget(Target):
             dep = targets[key]
             if dep.path == '#':
                 sys_libs.append(dep.name)
+                continue
+
+            if key in self.substitute_deps and self.substitute_deps[key]:
+                console.info('[%s] static lib %s was substitued for %s' % (
+                    key, self.name, self.substitute_deps[key]))
                 continue
 
             lib = dep._get_target_file('a')
@@ -762,6 +775,7 @@ class CcLibrary(CcTarget):
                  allow_undefined,
                  secret,
                  secret_revision_file,
+                 substitute_deps,
                  kwargs):
         """Init method.
 
@@ -784,6 +798,7 @@ class CcLibrary(CcTarget):
                 linkflags=linkflags,
                 extra_cppflags=extra_cppflags,
                 extra_linkflags=extra_linkflags,
+                substitute_deps=substitute_deps,
                 kwargs=kwargs)
         self.attr['link_all_symbols'] = link_all_symbols
         self.attr['binary_link_only'] = binary_link_only
@@ -848,6 +863,7 @@ class PrebuiltCcLibrary(CcTarget):
                 linkflags=None,
                 extra_cppflags=[],
                 extra_linkflags=[],
+                substitute_deps={},
                 kwargs=kwargs)
         self.attr['libpath_pattern'] = libpath_pattern
         self.attr['link_all_symbols'] = link_all_symbols
@@ -1016,6 +1032,7 @@ def cc_library(
         secret=False,
         secret_revision_file=None,
         secure=False,
+        substitute_deps={},
         **kwargs):
     """cc_library target.
 
@@ -1068,6 +1085,7 @@ def cc_library(
             allow_undefined=allow_undefined,
             secret=secret or secure,
             secret_revision_file=secret_revision_file,
+            substitute_deps=substitute_deps,
             kwargs=kwargs)
     build_manager.instance.register_target(target)
 
@@ -1109,6 +1127,7 @@ class ForeignCcLibrary(CcTarget):
                 linkflags=None,
                 extra_cppflags=[],
                 extra_linkflags=[],
+                substitute_deps={},
                 kwargs=kwargs)
         self.attr['install_dir'] = install_dir
         self.attr['link_all_symbols'] = link_all_symbols
@@ -1234,6 +1253,7 @@ class CcBinary(CcTarget):
                  extra_cppflags,
                  extra_linkflags,
                  export_dynamic,
+                 substitute_deps,
                  kwargs):
         """Init method.
 
@@ -1256,6 +1276,7 @@ class CcBinary(CcTarget):
                 linkflags=linkflags,
                 extra_cppflags=extra_cppflags,
                 extra_linkflags=extra_linkflags,
+                substitute_deps=substitute_deps,
                 kwargs=kwargs)
         self.attr['embed_version'] = embed_version
         self.attr['dynamic_link'] = dynamic_link
@@ -1354,6 +1375,7 @@ def cc_binary(name=None,
               extra_cppflags=[],
               extra_linkflags=[],
               export_dynamic=False,
+              substitute_deps={},
               **kwargs):
     """cc_binary target."""
     cc_binary_target = CcBinary(
@@ -1372,6 +1394,7 @@ def cc_binary(name=None,
             extra_cppflags=extra_cppflags,
             extra_linkflags=extra_linkflags,
             export_dynamic=export_dynamic,
+            substitute_deps=substitute_deps,
             kwargs=kwargs)
     build_manager.instance.register_target(cc_binary_target)
 
@@ -1414,6 +1437,7 @@ class CcPlugin(CcTarget):
                  extra_linkflags,
                  allow_undefined,
                  strip,
+                 substitute_deps,
                  kwargs):
         """Init method.
 
@@ -1435,6 +1459,7 @@ class CcPlugin(CcTarget):
                   linkflags=linkflags,
                   extra_cppflags=extra_cppflags,
                   extra_linkflags=extra_linkflags,
+                  substitute_deps=substitute_deps,
                   kwargs=kwargs)
         self.prefix = prefix
         self.suffix = suffix
@@ -1491,6 +1516,7 @@ def cc_plugin(
         extra_linkflags=[],
         allow_undefined=True,
         strip=False,
+        substitute_deps={},
         **kwargs):
     """cc_plugin target."""
     target = CcPlugin(
@@ -1510,6 +1536,7 @@ def cc_plugin(
             extra_linkflags=extra_linkflags,
             allow_undefined=allow_undefined,
             strip=strip,
+            substitute_deps=substitute_deps,
             kwargs=kwargs)
     build_manager.instance.register_target(target)
 
@@ -1545,6 +1572,7 @@ class CcTest(CcBinary):
             exclusive,
             heap_check,
             heap_check_debug,
+            substitute_deps,
             kwargs):
         """Init method."""
         # pylint: disable=too-many-locals
@@ -1568,6 +1596,7 @@ class CcTest(CcBinary):
                 extra_cppflags=extra_cppflags,
                 extra_linkflags=extra_linkflags,
                 export_dynamic=export_dynamic,
+                substitute_deps=substitute_deps,
                 kwargs=kwargs)
         self.type = 'cc_test'
         self.attr['testdata'] = var_to_list(testdata)
@@ -1622,6 +1651,7 @@ def cc_test(name=None,
             exclusive=False,
             heap_check=None,
             heap_check_debug=False,
+            substitute_deps={},
             **kwargs):
     """cc_test target."""
     # pylint: disable=too-many-locals
@@ -1646,6 +1676,7 @@ def cc_test(name=None,
             exclusive=exclusive,
             heap_check=heap_check,
             heap_check_debug=heap_check_debug,
+            substitute_deps=substitute_deps,
             kwargs=kwargs)
     build_manager.instance.register_target(cc_test_target)
 

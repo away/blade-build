@@ -55,6 +55,7 @@ class GoTarget(Target):
                 deps=deps,
                 visibility=visibility,
                 tags=tags,
+                substitute_deps={},
                 kwargs=kwargs)
 
         self._set_go_package()

@@ -47,6 +47,7 @@ class PythonTarget(Target):
             deps=deps,
             visibility=visibility,
             tags=tags,
+            substitute_deps={},
             kwargs=kwargs)
 
         if base:

@@ -55,6 +55,7 @@ class ScalaTarget(Target, JavaTargetMixIn):
                 deps=deps,
                 visibility=visibility,
                 tags=tags,
+                substitute_deps={},
                 kwargs=kwargs)
         self._process_resources(resources)
         if source_encoding:
