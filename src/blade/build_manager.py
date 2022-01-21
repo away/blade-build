@@ -400,6 +400,8 @@ class Blade(object):
             return self._dump_targets(output_file_name)
         if self.__options.dump_all_tags:
             return self._dump_all_tags(output_file_name)
+        if self.__options.dump_all_targets:
+            return self._dump_targets(output_file_name, include_deps=True)
         # The "--config" is already handled before this
         raise AssertionError("Invalid dump option")
 
@@ -410,13 +412,17 @@ class Blade(object):
             self.get_all_rule_names(),
             output_file_name)
 
-    def _dump_targets(self, output_file_name):
+    def _dump_targets(self, output_file_name, include_deps=False):
         """Implement the "dump --targets" subcommand."""
         result = []
         with open(output_file_name, 'w') as f:
             for target_key in self.__expanded_command_targets:
                 target = self.__target_database[target_key]
                 result.append(target.dump())
+            if include_deps:
+                for target_key in self.__build_targets:
+                    target = self.__target_database[target_key]
+                    result.append(target.dump())
             json.dump(result, fp=f, indent=2, sort_keys=True)
             print(file=f)
         return 0

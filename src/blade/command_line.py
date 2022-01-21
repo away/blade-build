@@ -399,6 +399,9 @@ class CommandLineParser(object):
             '--targets', dest='dump_targets', default=False, action='store_true',
             help='Dump attributes of targets in json format')
         group.add_argument(
+            '--all-targets', dest='dump_all_targets', default=False, action='store_true',
+            help='Dump attributes of targets in json format include deps targets')
+        group.add_argument(
             '--all-tags', dest='dump_all_tags', default=False, action='store_true',
             help='Dump all tags of targets in json format')
     def _build_arg_parser(self):
