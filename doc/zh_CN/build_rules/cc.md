@@ -32,6 +32,10 @@ CC 目标均支持的属性为：
 
   例如：`linkflags = ['-fopenmp']`。常用 flags 比如 `-g` 等都已经内置，一般无需指定。由于会覆盖全局选项，除非你非常理解 `gcc` 和 `ld` 的各种链接选项，不要轻易用这个参数。
 
+- `substitute_deps`: dict = {}，替换间接依赖库(deps), 类似go.mod里的replace()，用于依赖模块局部升级替代，如在顶级的cc_binary上替换，而不修改整个BUILD依赖图, 避免影响其他模块。
+
+  例如：`substitute_deps={'//xlib:lib_v1': '//xlib:lib_v2'}`，用lib_v2替换lib_v1。
+
 ## cc_library
 
 用于描述 C++ 库目标。

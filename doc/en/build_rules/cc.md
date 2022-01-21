@@ -43,6 +43,11 @@ The common CC attributes are：
   Because global options will be overridden, unless you really understand the link related options of `gcc` and `ld`,
   do not use this parameter lightly.
 
+- `substitute_deps`: dict = {}, substitute un-direct dependent target (deps), which is similar to replace() in go.mod.
+  Usually for replacing single module for a top cc_binary instead of modifying whole dependent graph that avoid influnce other target.
+
+  For example: `substitute_deps={'//xlib:lib_v1': '//xlib:lib_v2'}`, substitute lib_v2 for lib_v1.
+
 ## cc_library
 
 Build a C/C++ library
